@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BountyStatus {
+  ACTIVE
+  CLAIMED
+  CANCELLED
+}
+
+enum ClothingType {
+  SHIRT
+  PANTS
+  FULL
+  ACCESSORY
+}
+
+// ---------------------------------------------------------------------------
+// User & identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  robloxUserId  String   @unique
+  robloxUsername String
+  avatarUrl     String?
+  role          UserRole @default(USER)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  balance       PlayerBalance?
+  eventLogs     EventLog[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model PlayerBalance {
+  robloxUserId   String   @unique
+  drogonsBalance BigInt   @default(0)
+  updatedAt      DateTime @updatedAt
+
+  user User? @relation(fields: [robloxUserId], references: [robloxUserId], onDelete: Cascade)
+
+  @@index([drogonsBalance(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// Houses & house balances (leaderboard)
+// ---------------------------------------------------------------------------
+
+model House {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  balance HouseBalance?
+
+  @@index([name])
+}
+
+model HouseBalance {
+  houseId        String   @unique
+  drogonsBalance BigInt   @default(0)
+  activityPoints Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  house House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([drogonsBalance(sort: Desc)])
+  @@index([activityPoints(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// Bounties
+// ---------------------------------------------------------------------------
+
+model Bounty {
+  id                   String        @id @default(cuid())
+  targetRobloxUserId   String
+  amount               Int
+  status               BountyStatus  @default(ACTIVE)
+  createdAt            DateTime      @default(now())
+  claimedAt            DateTime?
+  claimedByRobloxUserId String?
+  claimedByUsername     String?
+
+  @@index([status])
+  @@index([status, amount(sort: Desc)])
+  @@index([targetRobloxUserId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ---------------------------------------------------------------------------
+// Snapshots & logs
+// ---------------------------------------------------------------------------
+
+model PlayerCountSnapshot {
+  id          String   @id @default(cuid())
+  playerCount Int
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+}
+
+model EventLog {
+  id        String   @id @default(cuid())
+  type      String
+  message   String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// Clothing & economy ad
+// ---------------------------------------------------------------------------
+
+model ClothingItem {
+  id           String       @id @default(cuid())
+  clothingName String       @unique
+  clothingType ClothingType
+  shirtID      Int?
+  pantsID      Int?
+  updatedAt    DateTime     @updatedAt
+
+  @@index([clothingType])
+}
+
+model EconomyAd {
+  id        String   @id @default(cuid())
+  groupID   Int?
+  groupName String?
+  updatedAt DateTime @updatedAt
+}
