@@ -32,5 +32,6 @@ Thumbs.db
 # Vercel
 .vercel
 
-# Prisma
+# Prisma (keep migration SQL; only ignore lock file)
 prisma/migrations/**/migration_lock.toml
+!prisma/migrations/**/migration.sql
