@@ -23,9 +23,9 @@ export default async function PlayerPage({ params }: Props) {
   });
   const player = {
     id: user.id,
-    robloxUserId: user.robloxUserId,
-    username: user.robloxUsername,
-    displayName: user.robloxUsername,
+    robloxUserId: user.robloxUserId ?? robloxUserId,
+    username: user.robloxUsername ?? user.username,
+    displayName: user.robloxUsername ?? user.username,
     avatarUrl: user.avatarUrl,
     drogons: user.balance ? bigIntToNumber(user.balance.drogonsBalance) : 0,
     houseName: null as string | null,
