@@ -95,7 +95,13 @@ export async function POST(
       });
       await logEvent("spend_drogons", reason || undefined, { amount, reason }, user.id);
       if (amount >= LARGE_SPEND_THRESHOLD) {
-        await optionalDiscordWebhook({ type: "large_purchase", userId: user.robloxUserId, username: user.robloxUsername, amount, reason });
+        await optionalDiscordWebhook({
+          type: "large_purchase",
+          userId: user.robloxUserId ?? roblox_userid,
+          username: user.robloxUsername ?? user.username,
+          amount,
+          reason,
+        });
       }
       return NextResponse.json({ ok: true }, { status: 200 });
     }
