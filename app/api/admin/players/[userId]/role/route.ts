@@ -14,7 +14,7 @@ export async function PATCH(
 ) {
   const guard = await requireAdmin();
   if ("error" in guard) return guard.error;
-  if (!isAllowlistSuperadmin(guard.session.robloxUserId)) {
+  if (!isAllowlistSuperadmin(guard.session.robloxUserId ?? "")) {
     return NextResponse.json({ error: "Forbidden: only allowlist superadmins can change user role" }, { status: 403 });
   }
   const { userId } = await params;
