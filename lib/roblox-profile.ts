@@ -22,7 +22,7 @@ export function parseRobloxUserId(input: string): string | null {
   if (!trimmed) return null;
   const numericOnly = /^\d+$/.exec(trimmed);
   if (numericOnly) return numericOnly[0];
-  const profileMatch = /(?:roblox\.com\/users\/|/users/)(\d+)/i.exec(trimmed);
+  const profileMatch = /(?:roblox\.com\/users\/|\/users\/)(\d+)/i.exec(trimmed);
   return profileMatch ? profileMatch[1] : null;
 }
 
