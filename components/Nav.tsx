@@ -106,7 +106,7 @@ export function Nav() {
             </div>
           ) : (
             <Link href="/login" className="btn-primary">
-              Sign in with Roblox
+              Sign in
             </Link>
           )}
         </div>

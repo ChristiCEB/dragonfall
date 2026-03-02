@@ -3,8 +3,7 @@ import { randomBytes, createHash } from "crypto";
 import { getAuthorizeUrl } from "@/lib/roblox-oauth";
 
 /**
- * GET /login — Redirects to Roblox OAuth 2.0 authorize endpoint (Authorization Code + PKCE).
- * @see https://create.roblox.com/docs/cloud/auth/oauth2-reference (GET v1/authorize)
+ * GET /login/roblox — Redirects to Roblox OAuth 2.0 (optional legacy/link flow).
  */
 export async function GET() {
   try {
@@ -35,7 +34,7 @@ export async function GET() {
     });
     return res;
   } catch (e) {
-    console.error("Login redirect error:", e);
+    console.error("Login Roblox redirect error:", e);
     return NextResponse.redirect(new URL("/error?error=oauth_config", process.env.APP_BASE_URL ?? "http://localhost:3000"));
   }
 }

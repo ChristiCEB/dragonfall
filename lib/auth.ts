@@ -10,7 +10,7 @@ const MAX_AGE_SEC = 30 * 24 * 60 * 60; // 30 days
 
 export type SessionUser = {
   id: string;
-  robloxUserId: string;
+  robloxUserId: string | null;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
@@ -21,7 +21,7 @@ export type SessionUser = {
 
 type JWTClaims = {
   sub: string;
-  robloxUserId: string;
+  robloxUserId: string | null;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
@@ -147,10 +147,14 @@ export { isAdmin } from "@/lib/admin-auth";
 export async function getOrCreateUser(robloxUserId: string, username: string, avatarUrl: string | null, _displayName?: string): Promise<{ user: { id: string; robloxUserId: string; username: string; displayName: string | null; avatarUrl: string | null }; isAdmin: boolean }> {
   let user = await prisma.user.findUnique({ where: { robloxUserId } });
   if (!user) {
+    const desiredUsername = username?.trim() || `roblox_${robloxUserId}`;
+    const existing = await prisma.user.findUnique({ where: { username: desiredUsername } });
+    const siteUsername = existing ? `roblox_${robloxUserId}` : desiredUsername;
     user = await prisma.user.create({
       data: {
         robloxUserId,
         robloxUsername: username,
+        username: siteUsername,
         avatarUrl,
       },
     });
@@ -168,8 +172,8 @@ export async function getOrCreateUser(robloxUserId: string, username: string, av
     user: {
       id: user.id,
       robloxUserId: user.robloxUserId,
-      username: user.robloxUsername,
-      displayName: user.robloxUsername,
+      username: user.username,
+      displayName: user.robloxUsername ?? user.username,
       avatarUrl: user.avatarUrl,
     },
     isAdmin: isAdminFlag,

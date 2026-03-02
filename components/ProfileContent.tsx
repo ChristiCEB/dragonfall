@@ -15,6 +15,10 @@ export function ProfileContent({ session }: { session: SessionUser }) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
 
   useEffect(() => {
+    if (!session.robloxUserId) {
+      setProfile(null);
+      return;
+    }
     fetch(`/api/players/${session.robloxUserId}`)
       .then((r) => r.json())
       .then((data) =>
@@ -50,7 +54,7 @@ export function ProfileContent({ session }: { session: SessionUser }) {
           </p>
           <p className="text-amber-200/70">@{session.username}</p>
           <p className="mt-1 text-sm text-amber-200/50">
-            Roblox ID: {session.robloxUserId}
+            Roblox ID: {session.robloxUserId ?? "Not linked"}
           </p>
         </div>
       </div>

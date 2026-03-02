@@ -41,8 +41,12 @@ enum RobloxLinkStatus {
 
 model User {
   id               String    @id @default(cuid())
-  robloxUserId     String    @unique
-  robloxUsername   String
+  email            String?   @unique
+  username         String    @unique
+  passwordHash     String?
+
+  robloxUserId     String?   @unique
+  robloxUsername   String?
   avatarUrl        String?
   robloxVerifiedAt DateTime?
   role             UserRole  @default(USER)

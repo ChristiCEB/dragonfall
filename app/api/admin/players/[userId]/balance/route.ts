@@ -20,6 +20,7 @@ export async function PATCH(
   if (!parsed.success) return NextResponse.json({ error: "Invalid body", details: parsed.error.flatten() }, { status: 400 });
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { balance: true } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (!user.robloxUserId) return NextResponse.json({ error: "User has no linked Roblox account; link Roblox first to set balance." }, { status: 400 });
   const previousDrogons = user.balance ? bigIntToNumber(user.balance.drogonsBalance) : 0;
   await prisma.playerBalance.upsert({
     where: { robloxUserId: user.robloxUserId },

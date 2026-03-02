@@ -53,38 +53,46 @@ export async function POST(request: NextRequest) {
   }
 
   const now = new Date();
-  await prisma.$transaction([
-    prisma.robloxLinkRequest.update({
-      where: { id: pending.id },
-      data: { status: RobloxLinkStatus.VERIFIED },
-    }),
-    prisma.user.update({
-      where: { id: auth.user.id },
-      data: {
-        robloxUserId: profile.robloxUserId,
-        robloxUsername: profile.username,
-        avatarUrl: profile.avatarUrl,
-        robloxVerifiedAt: now,
-      },
-    }),
-    prisma.playerBalance.upsert({
-      where: { robloxUserId: profile.robloxUserId },
-      create: { robloxUserId: profile.robloxUserId, drogonsBalance: BigInt(0), updatedAt: now },
-      update: { updatedAt: now },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.robloxLinkRequest.update({
+        where: { id: pending.id },
+        data: { status: RobloxLinkStatus.VERIFIED },
+      }),
+      prisma.user.update({
+        where: { id: auth.user.id },
+        data: {
+          robloxUserId: profile.robloxUserId,
+          robloxUsername: profile.username,
+          avatarUrl: profile.avatarUrl,
+          robloxVerifiedAt: now,
+        },
+      }),
+      prisma.playerBalance.upsert({
+        where: { robloxUserId: profile.robloxUserId },
+        create: { robloxUserId: profile.robloxUserId, drogonsBalance: BigInt(0), updatedAt: now },
+        update: { updatedAt: now },
+      }),
+    ]);
+  } catch (e: any) {
+    const msg = String(e?.message ?? "");
+    if (msg.includes("Unique constraint failed") && msg.includes("robloxUserId")) {
+      return NextResponse.json({ error: "That Roblox account is already linked to another website user." }, { status: 409 });
+    }
+    throw e;
+  }
 
   const updatedUser = await prisma.user.findUnique({
     where: { id: auth.user.id },
-    select: { id: true, robloxUserId: true, robloxUsername: true, avatarUrl: true, role: true },
+    select: { id: true, username: true, robloxUserId: true, robloxUsername: true, avatarUrl: true, role: true },
   });
   if (updatedUser) {
     const isAdminFlag = await isAdmin(updatedUser.robloxUserId ?? "", updatedUser.role as "USER" | "ADMIN");
     const token = await createSession({
       id: updatedUser.id,
-      robloxUserId: updatedUser.robloxUserId ?? "",
-      username: updatedUser.robloxUsername ?? "",
-      displayName: updatedUser.robloxUsername,
+      robloxUserId: updatedUser.robloxUserId ?? null,
+      username: updatedUser.username,
+      displayName: updatedUser.robloxUsername ?? updatedUser.username,
       avatarUrl: updatedUser.avatarUrl ?? null,
       isAdmin: isAdminFlag,
     });

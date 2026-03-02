@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 export type SessionUser = {
   id: string;
-  robloxUserId: string;
+  robloxUserId: string | null;
   username: string;
   displayName: string | null;
   avatarUrl: string | null;
