@@ -3,16 +3,16 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const HOUSES = [
-  "House Stark",
-  "House Lannister",
-  "House Targaryen",
-  "House Baratheon",
-  "House Tyrell",
-  "House Martell",
-  "House Greyjoy",
-  "House Arryn",
-  "House Bolton",
-  "House Frey",
+  "Stark",
+  "Lannister",
+  "Targaryen",
+  "Baratheon",
+  "Tyrell",
+  "Martell",
+  "Greyjoy",
+  "Arryn",
+  "Bolton",
+  "Frey",
 ];
 
 async function main() {

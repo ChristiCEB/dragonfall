@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { bigIntToNumber } from "@/lib/bigint";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/rate-limit";
+import { displayHouseName } from "@/lib/house-name";
 
 export async function GET(request: NextRequest) {
   if (!(await rateLimit(`api:${getClientIp(request)}`, 60))) {
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   const withBalance = houses
     .map((h) => ({
       id: h.id,
-      name: h.name,
+      name: displayHouseName(h.name),
       totalDrogons: h.balance ? bigIntToNumber(h.balance.drogonsBalance) : 0,
       activityPoints: h.balance?.activityPoints ?? 0,
       updatedAt: h.balance?.updatedAt ?? null,

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { bigIntToNumber } from "@/lib/bigint";
+import { displayHouseName, normalizeHouseName } from "@/lib/house-name";
 
 const bodySchema = z.object({
   name: z.string().min(1),
@@ -19,7 +20,7 @@ export async function GET() {
   });
   const result = houses.map((h) => ({
     id: h.id,
-    name: h.name,
+    name: displayHouseName(h.name),
     totalDrogons: h.balance ? bigIntToNumber(h.balance.drogonsBalance) : 0,
     activityPoints: h.balance?.activityPoints ?? 0,
     updatedAt: h.balance?.updatedAt ?? null,
@@ -33,9 +34,10 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid body", details: parsed.error.flatten() }, { status: 400 });
+  const houseName = normalizeHouseName(parsed.data.name);
   const house = await prisma.house.upsert({
-    where: { name: parsed.data.name },
-    create: { name: parsed.data.name },
+    where: { name: houseName },
+    create: { name: houseName },
     update: {},
   });
   if (parsed.data.totalDrogons !== undefined || parsed.data.activityPoints !== undefined) {
@@ -58,7 +60,7 @@ export async function PATCH(request: NextRequest) {
   });
   return NextResponse.json({
     id: updated!.id,
-    name: updated!.name,
+    name: displayHouseName(updated!.name),
     totalDrogons: updated!.balance ? bigIntToNumber(updated!.balance.drogonsBalance) : 0,
     activityPoints: updated!.balance?.activityPoints ?? 0,
   });

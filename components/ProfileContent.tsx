@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import type { SessionUser } from "@/hooks/useSession";
 import { useEffect, useState } from "react";
 
@@ -72,6 +73,9 @@ export function ProfileContent({ session }: { session: SessionUser }) {
           </div>
         )}
       </div>
+      <p className="text-sm text-amber-200/70">
+        <Link href="/account/link-roblox" className="link-gold">Link or re-verify Roblox account via bio</Link>
+      </p>
     </div>
   );
 }

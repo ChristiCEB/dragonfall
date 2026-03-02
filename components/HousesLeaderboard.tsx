@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { displayHouseName } from "@/lib/house-name";
 
 type House = {
   id: string;
@@ -46,7 +47,7 @@ export function HousesLeaderboard() {
             {houses.map((h, i) => (
               <tr key={h.id} className="border-b border-amber-900/30 hover:bg-stone-800/30 transition-colors">
                 <td className="p-3 text-amber-200/80">{i + 1}</td>
-                <td className="p-3 font-medium text-amber-100">{h.name}</td>
+                <td className="p-3 font-medium text-amber-100">{displayHouseName(h.name)}</td>
                 <td className="p-3 text-amber-400">{h.activityPoints.toLocaleString()}</td>
                 <td className="p-3 text-amber-200/80">{h.totalDrogons.toLocaleString()}</td>
               </tr>
