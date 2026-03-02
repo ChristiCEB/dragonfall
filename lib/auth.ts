@@ -159,7 +159,7 @@ export async function getOrCreateUser(robloxUserId: string, username: string, av
       },
     });
     await prisma.playerBalance.create({
-      data: { robloxUserId: user.robloxUserId, drogonsBalance: BigInt(0) },
+      data: { robloxUserId, drogonsBalance: BigInt(0) },
     });
   } else {
     user = await prisma.user.update({
@@ -171,7 +171,7 @@ export async function getOrCreateUser(robloxUserId: string, username: string, av
   return {
     user: {
       id: user.id,
-      robloxUserId: user.robloxUserId,
+      robloxUserId,
       username: user.username,
       displayName: user.robloxUsername ?? user.username,
       avatarUrl: user.avatarUrl,
