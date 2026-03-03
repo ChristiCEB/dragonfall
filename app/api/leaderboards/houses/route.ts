@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
   const houses = await prisma.house.findMany({
+    where: { isActive: true },
     include: { balance: true },
     orderBy: { name: "asc" },
   });

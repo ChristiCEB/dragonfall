@@ -96,11 +96,18 @@ model PlayerBalance {
 model House {
   id        String   @id @default(cuid())
   name      String   @unique
+  groupId   Int?     // Roblox group ID for house membership
+  r         Int      @default(0) // 0-255
+  g         Int      @default(0)
+  b         Int      @default(0)
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   balance HouseBalance?
 
   @@index([name])
+  @@index([isActive])
 }
 
 model HouseBalance {
@@ -188,16 +195,16 @@ model EconomyAd {
 // Nametag groups (Roblox nametag options, managed by admin)
 // ---------------------------------------------------------------------------
 
-model NametagGroup {
-  id         String   @id @default(cuid())
-  groupName  String
-  groupId    Int      // Roblox group ID
-  groupColor String   // e.g. "170,32,32"
-  minRank    Int?     // optional minimum rank to show (0-254)
-  sortOrder  Int      @default(0) // lower = earlier in list
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+model Group {
+  id        Int      @id @default(autoincrement())
+  groupName String   @unique
+  groupId   Int      // Roblox group ID
+  r         Int      // 0-255
+  g         Int
+  b         Int
+  minRank   Int?     // optional minimum rank to show (0-254)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@unique([groupId])
-  @@index([sortOrder])
+  @@index([groupId])
 }

@@ -8,7 +8,8 @@ const WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
 export type DiscordWebhookEvent =
   | { type: "bounty_claimed"; targetUserId: string; targetUsername: string; claimedBy: string; amount: number }
   | { type: "large_purchase"; userId: string; username: string; amount: number; reason?: string }
-  | { type: "suspicious"; message: string; details?: Record<string, unknown> };
+  | { type: "suspicious"; message: string; details?: Record<string, unknown> }
+  | { type: "admin_destructive"; message: string; details?: Record<string, unknown> };
 
 /**
  * If DISCORD_WEBHOOK_URL is set, POST an embed summary to Discord. Otherwise no-op.
@@ -32,6 +33,10 @@ export async function optionalDiscordWebhook(event: DiscordWebhookEvent): Promis
     case "suspicious":
       content = `**Suspicious activity**\n${event.message}${event.details ? `\n\`\`\`json\n${JSON.stringify(event.details)}\n\`\`\`` : ""}`;
       color = 0xff0000;
+      break;
+    case "admin_destructive":
+      content = `**Admin action**\n${event.message}${event.details ? `\n\`\`\`json\n${JSON.stringify(event.details)}\n\`\`\`` : ""}`;
+      color = 0xff6600;
       break;
     default:
       return;

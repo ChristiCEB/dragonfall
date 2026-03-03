@@ -5,6 +5,7 @@ import { displayHouseName } from "@/lib/house-name";
 
 export async function GET() {
   const houses = await prisma.house.findMany({
+    where: { isActive: true },
     include: { balance: true },
     orderBy: { name: "asc" },
   });

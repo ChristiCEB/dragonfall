@@ -16,14 +16,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const groups = await prisma.nametagGroup.findMany({
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    const groups = await prisma.group.findMany({
+      orderBy: { groupName: "asc" },
     });
 
     const payload = groups.map((g) => ({
       groupName: g.groupName,
       groupId: g.groupId,
-      groupColor: g.groupColor,
+      groupColor: `${g.r},${g.g},${g.b}`,
       ...(g.minRank != null && { minRank: g.minRank }),
     }));
 

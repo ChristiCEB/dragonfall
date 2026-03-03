@@ -226,6 +226,8 @@ local response = game:GetService("HttpService"):PostAsync(url, body, Enum.HttpCo
 - `GET /api/players/[robloxUserId]/events` — Player recent events
 - `GET /api/bounties` — Active bounties
 - `GET /api/player-count` — Latest player count
+- `GET /postbacks/groups/fetch` — Nametag groups for Roblox (rate-limited). Returns `[{ groupName, groupId, groupColor: "r,g,b", minRank? }]`.
+- `GET /postbacks/drogons/fetch` — All player balances (rate-limited). Returns `[{ roblox_userid, balance }]`.
 
 ---
 
@@ -236,15 +238,27 @@ If `DISCORD_WEBHOOK_URL` is set, the app sends embeds for:
 - **Bounty claimed** — target, claimer, amount
 - **Large purchase** — user, amount (≥ 5000 Drogons), reason
 - **Suspicious** — postback errors, rejected payloads (suspicion score), handler errors
+- **Admin destructive** — delete group, delete house (with details)
 
 ---
 
 ## Admin
 
-Admins can use `/admin` (dashboard, users, bounties, logs). Access is granted if:
+Admins can use the admin area (sidebar: Dashboard, Users, Groups, Houses, Bounties, Logs). Access is granted if:
 
 - The user’s Roblox ID is in **`ADMIN_ROBLOX_USER_IDS`** (superadmins; only they can toggle another user’s role), or
 - The user is in the Roblox group **`ROBLOX_ADMIN_GROUP_ID`** with rank ≥ **`ROBLOX_ADMIN_MIN_RANK`** (cached 5 min).
+
+### Admin usage
+
+- **Dashboard** (`/admin`) — Cards: total users, total balance records, total Drogons in economy, active bounties, latest player count; last 10 event log entries.
+- **Users** (`/admin/users`) — Search players, edit Drogons balance, toggle admin role (superadmins only).
+- **Groups** (`/admin/groups`) — Nametag groups for Roblox: add/edit/delete groups (name, Roblox group ID, RGB color, optional min rank). Used by `GET /postbacks/groups/fetch`.
+- **Houses** (`/admin/houses`) — Houses for leaderboards: add/edit/delete houses (name, Roblox group ID, color, active flag). If the DB has no houses, the first load seeds defaults (Stark, Lannister, Targaryen, Baratheon, Tyrell, Martell, Greyjoy, Arryn).
+- **Bounties** (`/admin/bounties`) — Create and cancel bounties.
+- **Logs** (`/admin/logs`) — View event log.
+
+All admin routes and API routes under `/api/admin/*` are protected with `requireAdmin()`. Destructive actions (delete group, delete house) are logged to EventLog and, if **`DISCORD_WEBHOOK_URL`** is set, send an admin notification to Discord.
 
 ---
 
@@ -254,7 +268,7 @@ Admins can use `/admin` (dashboard, users, bounties, logs). Access is granted if
 ├── app/
 │   ├── (public)/           # Public pages: /, /houses, /players, /bounties, /profile
 │   ├── (auth)/             # Auth: /error, /callback
-│   ├── (admin)/            # Admin: /admin, /admin/users, /admin/bounties, /admin/logs
+│   ├── (admin)/            # Admin: /admin, /admin/users, /admin/groups, /admin/houses, /admin/bounties, /admin/logs
 │   ├── api/                # API routes (auth, postbacks, admin, health, etc.)
 │   ├── login/              # GET /login → redirect to Roblox OAuth
 │   ├── auth/callback/     # GET /auth/callback → OAuth callback
