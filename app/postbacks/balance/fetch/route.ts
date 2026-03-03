@@ -31,26 +31,39 @@ export async function GET(request: NextRequest) {
   const robloxUserIdStr = String(parsed);
 
   try {
-    // 3. Database: use upsert so we have a single code path for "get or create".
-    // We use upsert (not findUnique + create) to avoid race conditions when the game
-    // and other postbacks might create the same player concurrently.
-    // We auto-create users so the Roblox game can ask for any player's balance
-    // without the player having visited the web app first; the backend stays the
-    // single source of truth and we initialize with 0 Drogons.
-    const balance = await prisma.playerBalance.upsert({
+    // 3. Database: PlayerBalance has a foreign key to User.robloxUserId, so we can only
+    // create a PlayerBalance when a User with that robloxUserId exists. For players
+    // who have never linked or been created, we return balance 0 without creating a row.
+    let balanceRecord = await prisma.playerBalance.findUnique({
       where: { robloxUserId: robloxUserIdStr },
-      create: {
-        robloxUserId: robloxUserIdStr,
-        drogonsBalance: BigInt(0),
-      },
-      update: {},
     });
+
+    if (!balanceRecord) {
+      // Only auto-create PlayerBalance when a User already exists (e.g. linked account).
+      // This respects the FK and avoids P2003. Unknown players get balance 0 from this endpoint.
+      const userExists = await prisma.user.findUnique({
+        where: { robloxUserId: robloxUserIdStr },
+        select: { id: true },
+      });
+      if (userExists) {
+        balanceRecord = await prisma.playerBalance.upsert({
+          where: { robloxUserId: robloxUserIdStr },
+          create: {
+            robloxUserId: robloxUserIdStr,
+            drogonsBalance: BigInt(0),
+          },
+          update: {},
+        });
+      }
+    }
+
+    const balance = balanceRecord?.drogonsBalance ?? BigInt(0);
 
     // 4. Return format required by Roblox: roblox_userid as number, balance as number
     return NextResponse.json(
       {
         roblox_userid: parsed,
-        balance: Number(balance.drogonsBalance),
+        balance: Number(balance),
       },
       { status: 200 }
     );
