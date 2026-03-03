@@ -183,3 +183,21 @@ model EconomyAd {
   groupName String?
   updatedAt DateTime @updatedAt
 }
+
+// ---------------------------------------------------------------------------
+// Nametag groups (Roblox nametag options, managed by admin)
+// ---------------------------------------------------------------------------
+
+model NametagGroup {
+  id         String   @id @default(cuid())
+  groupName  String
+  groupId    Int      // Roblox group ID
+  groupColor String   // e.g. "170,32,32"
+  minRank    Int?     // optional minimum rank to show (0-254)
+  sortOrder  Int      @default(0) // lower = earlier in list
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([groupId])
+  @@index([sortOrder])
+}
