@@ -8,13 +8,12 @@
      GET https://dragonfall-smoky.vercel.app/postbacks/groups/fetch
      Returns: [ { groupName, groupId, groupColor, minRank? }, ... ]
 
-  B) Balance (per-player Drogons, single source of truth):
-     GET https://dragonfall-smoky.vercel.app/postbacks/balance/fetch?key=ROBLOX_PRIVATE_KEY&roblox_userid=USERID
-     Returns: { roblox_userid: number, balance: number }
+  B) Balance (bulk list, no key required):
+     GET https://dragonfall-smoky.vercel.app/postbacks/drogons/fetch
+     Returns: [ { roblox_userid: number, balance: number }, ... ]
 
-  Configuration:
-  - Set _G.privateKey to your ROBLOX_PRIVATE_KEY (server-only, never expose to client).
-  - Run in ServerScriptService or similar; uses HttpService (must be enabled in Game Settings).
+  In-game: Balance is stored in _G.balance[userId] and player:GetAttribute("drogons").
+  Group name and activity points are provided by the game (e.g. via activity postback); this script does not preset them.
 ]]
 
 local HttpService = game:GetService("HttpService")
@@ -24,14 +23,13 @@ local RunService = game:GetService("RunService")
 local BASE = "https://dragonfall-smoky.vercel.app"
 local BALANCE_REFRESH_INTERVAL = 30
 
--- Global state: balance cache and nametag groups (populated from backend)
+-- Global state: balance cache (userId -> balance) and nametag groups (populated from backend)
 if _G.balance == nil then _G.balance = {} end
 if _G.groups == nil then _G.groups = {} end
-if _G.privateKey == nil then _G.privateKey = "" end
 
 -- Fallback groups only if backend fetch fails (do not overwrite when fetch succeeds)
 local FALLBACK_GROUPS = {
-  { groupName = "TARGARYEN REALM", groupId = 10638225, groupColor = "170,32,32", minRank = 0 };
+  { groupName = "DRAGONFALL", groupId = 9667152, groupColor = "170,32,32", minRank = 0 };
 }
 
 -- Special tags that are not from backend (hardcoded display names)
@@ -41,17 +39,10 @@ local SPECIAL_TAG_NAMES = {
 }
 
 -- ---------------------------------------------------------------------------
--- HTTP: Balance fetch (per-player)
+-- HTTP: Balance fetch (bulk list from /postbacks/drogons/fetch, no key)
 -- ---------------------------------------------------------------------------
-local function fetchBalanceForPlayer(player)
-  local key = _G.privateKey
-  if not key or key == "" then
-    warn("[Drogons] ROBLOX_PRIVATE_KEY not set (_G.privateKey). Balance fetch skipped.")
-    return nil
-  end
-  local userId = player.UserId
-  local url = string.format("%s/postbacks/balance/fetch?key=%s&roblox_userid=%d",
-    BASE, HttpService:UrlEncode(key), userId)
+local function fetchAllBalances()
+  local url = BASE .. "/postbacks/drogons/fetch"
   local ok, result = pcall(function()
     return HttpService:RequestAsync({
       Url = url;
@@ -60,22 +51,29 @@ local function fetchBalanceForPlayer(player)
     })
   end)
   if not ok then
-    warn("[Drogons] Balance fetch error for UserId", userId, ":", result)
-    return nil
+    warn("[Drogons] Balance fetch error:", result)
+    return false
   end
   if result.StatusCode ~= 200 then
     warn("[Drogons] Balance fetch failed. StatusCode:", result.StatusCode, "Body:", result.Body or "")
-    return nil
+    return false
   end
-  local data = nil
+  local list = nil
   pcall(function()
-    data = HttpService:JSONDecode(result.Body)
+    list = HttpService:JSONDecode(result.Body)
   end)
-  if type(data) == "table" and type(data.balance) == "number" then
-    return data.balance
+  if type(list) ~= "table" then
+    warn("[Drogons] Balance response invalid. Body:", result.Body or "")
+    return false
   end
-  warn("[Drogons] Balance response invalid for UserId", userId, "Body:", result.Body or "")
-  return nil
+  for _, entry in ipairs(list) do
+    local uid = entry.roblox_userid
+    local bal = entry.balance
+    if type(uid) == "number" and type(bal) == "number" then
+      _G.balance[uid] = bal
+    end
+  end
+  return true
 end
 
 -- ---------------------------------------------------------------------------
@@ -117,7 +115,7 @@ end
 -- Nametag: build tag text and update UI
 -- ---------------------------------------------------------------------------
 local function getDrogonsForPlayer(player)
-  local attr = player:GetAttribute("Drogons")
+  local attr = player:GetAttribute("drogons")
   if attr ~= nil then
     local n = tonumber(attr)
     if n ~= nil then return n end
@@ -160,13 +158,12 @@ local function changeNameTag(player, groupName, groupColorRgb)
   end
 end
 
--- Trigger an immediate balance fetch and update cache + attribute + nametag. Call after spend/loot.
+-- Trigger an immediate balance refresh (refetch bulk and update this player). Call after spend/loot.
 function _G.RefreshDrogons(player)
   if not player or not player.Parent then return end
-  local balance = fetchBalanceForPlayer(player)
-  if balance ~= nil then
-    _G.balance[player.UserId] = balance
-    player:SetAttribute("Drogons", balance)
+  if fetchAllBalances() then
+    local balance = _G.balance[player.UserId] or 0
+    player:SetAttribute("drogons", balance)
     _G.updateNameTag(player)
   end
 end
@@ -196,36 +193,24 @@ local function getPlayerGroupInfo(player)
   return bestName, bestColor
 end
 
+-- Apply current _G.balance to a player's attribute and nametag (call after bulk fetch or when player joins).
+local function applyBalanceToPlayer(player)
+  if not player.Parent then return end
+  local balance = _G.balance[player.UserId] or 0
+  player:SetAttribute("drogons", balance)
+  _G.updateNameTag(player)
+end
+
 -- ---------------------------------------------------------------------------
--- Player lifecycle: fetch balance, set attribute, hook changes, refresh nametag
+-- Player lifecycle: use bulk balance; hook attribute change; refresh nametag
 -- ---------------------------------------------------------------------------
 local function onPlayerAdded(player)
-  -- Initial balance fetch
-  local balance = fetchBalanceForPlayer(player)
-  if balance ~= nil then
-    _G.balance[player.UserId] = balance
-    player:SetAttribute("Drogons", balance)
-  else
-    _G.balance[player.UserId] = 0
-    player:SetAttribute("Drogons", 0)
-  end
+  -- Set attribute from cache (bulk fetch may have run already; if not, we refresh once)
+  applyBalanceToPlayer(player)
 
-  -- When Drogons attribute changes (e.g. after RefreshDrogons), update nametag
-  player:GetAttributeChangedSignal("Drogons"):Connect(function()
+  -- When drogons attribute changes (e.g. after RefreshDrogons or bulk refresh), update nametag
+  player:GetAttributeChangedSignal("drogons"):Connect(function()
     _G.updateNameTag(player)
-  end)
-
-  -- Periodic balance refresh per player
-  task.spawn(function()
-    while player.Parent do
-      task.wait(BALANCE_REFRESH_INTERVAL)
-      if not player.Parent then break end
-      local b = fetchBalanceForPlayer(player)
-      if b ~= nil then
-        _G.balance[player.UserId] = b
-        player:SetAttribute("Drogons", b)
-      end
-    end
   end)
 end
 
@@ -272,6 +257,26 @@ task.spawn(function()
   if not success then
     _G.groups = FALLBACK_GROUPS
     warn("[Groups] Using fallback groups (backend fetch failed).")
+  end
+end)
+
+-- ---------------------------------------------------------------------------
+-- Balance: fetch bulk from /postbacks/drogons/fetch periodically; apply to all players
+-- (Group name and activity points come from the game; we only manage balance display here.)
+-- ---------------------------------------------------------------------------
+local function refreshAllBalancesAndApply()
+  if fetchAllBalances() then
+    for _, p in ipairs(Players:GetPlayers()) do
+      applyBalanceToPlayer(p)
+    end
+  end
+end
+
+task.spawn(function()
+  refreshAllBalancesAndApply()
+  while true do
+    task.wait(BALANCE_REFRESH_INTERVAL)
+    refreshAllBalancesAndApply()
   end
 end)
 
